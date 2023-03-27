@@ -1,13 +1,20 @@
-import socket
 import logging
 import signal
+from shared.socket import Socket
+from shared.protocol import Protocol
+from common.utils import Bet, store_bets
 
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
-        self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._server_socket.bind(('', port))
+        # self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # self._server_socket.bind(('', port))
+        # self._server_socket.listen(listen_backlog)
+        self._server_socket = Socket()
+        self._server_socket.bind('', port)
         self._server_socket.listen(listen_backlog)
+
+        self.protocol = Protocol()
 
         self.is_alive = True
         signal.signal(signal.SIGTERM, self._handle_sigterm)
@@ -36,16 +43,23 @@ class Server:
         client socket will also be closed
         """
         try:
-            # TODO: Modify the receive to avoid short-reads
-            msg = client_sock.recv(1024).rstrip().decode('utf-8')
-            addr = client_sock.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            # TODO: Modify the send to avoid short-writes
-            client_sock.send("{}\n".format(msg).encode('utf-8'))
-        except OSError as e:
-            logging.error("action: receive_message | result: fail | error: {e}")
+            msg = self.protocol.recv_bet(client_sock)
+            bet = self.parse_msg(msg)
+            store_bets([bet])
+            self.protocol.send_ack(client_sock, True)
+            logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
+        except Exception as e:
+            logging.error(f"action: receive_message | result: fail | error: {e}")
         finally:
             client_sock.close()
+
+
+    def parse_msg(self, msg):
+        splitted_string = msg.split(',')
+        return Bet(splitted_string[0], splitted_string[1], splitted_string[2],
+                   splitted_string[3], splitted_string[4], splitted_string[5])
+        
+
 
     def __accept_new_connection(self):
         """
@@ -57,7 +71,9 @@ class Server:
 
         # Connection arrived
         logging.info('action: accept_connections | result: in_progress')
-        c, addr = self._server_socket.accept()
+        # c, addr = self._server_socket.accept()
+        c = self._server_socket.accept()
+        addr = c.get_addr()
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
         return c
 
@@ -68,7 +84,6 @@ class Server:
     def stop(self):
         self._server_running = False
         try:
-            self._server_socket.shutdown(socket.SHUT_RDWR)
             self._server_socket.close()
         except OSError as e:
             logging.error("action: stop server | result: fail | error: {e}")

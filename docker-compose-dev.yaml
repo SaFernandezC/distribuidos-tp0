@@ -12,20 +12,47 @@ services:
       - testing_net
     volumes:
       - ./server/config.ini:/config.ini
+      - ./shared:/shared
 
   client1:
     container_name: client1
     image: client:latest
-    entrypoint: /client
+    entrypoint: python3 /main.py
     environment:
       - CLI_ID=1
       - CLI_LOG_LEVEL=DEBUG
+      - NOMBRE=Santiago
+      - APELLIDO=Lorca
+      - DOCUMENTO=30904465
+      - NACIMIENTO=1999-03-17
+      - NUMERO=7574
     networks:
       - testing_net
     depends_on:
       - server
     volumes:
-      - ./client/config.yaml:/config.yaml
+      - ./client/config.ini:/config.ini
+      - ./shared:/shared
+
+  client2:
+    container_name: client2
+    image: client:latest
+    entrypoint: python3 /main.py
+    environment:
+      - CLI_ID=2
+      - CLI_LOG_LEVEL=DEBUG
+      - NOMBRE=Lionel
+      - APELLIDO=Messi
+      - DOCUMENTO=33016244
+      - NACIMIENTO=1987-06-24
+      - NUMERO=9999
+    networks:
+      - testing_net
+    depends_on:
+      - server
+    volumes:
+      - ./client/config.ini:/config.ini
+      - ./shared:/shared
 
 networks:
   testing_net:
