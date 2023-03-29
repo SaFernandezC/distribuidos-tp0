@@ -58,8 +58,8 @@ class Server:
                 store_bets(bets)
                 if last_batch:
                     waiting_result_queue.put(client_sock)
-            except:
-                print("error writing bets")
+            except Exception as e:
+                logging.error("action: escribiendo apuestas | result: fail | error: {}".format(e))
 
     def _handle_connection(self, clients_queue, bets_queue, waiting_result_queue):
         while True:
@@ -76,8 +76,7 @@ class Server:
 
                 logging.info(f"action: batch almacenado | result: success | agency: {batch['agency']} | cantidad apuestas: {len(batch['data'])}")
             except Exception as e:
-                logging.error("action _handle")
-                print("error handleando conexiones")
+                logging.error("action: handle_connections | result: fail | error: {}".format(e))
 
     def run(self):
         for worker in self._workers:
