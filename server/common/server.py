@@ -2,10 +2,10 @@ import logging
 import signal
 from shared.socket import Socket
 from shared.protocol import Protocol
-from common.utils import Bet, store_bets
+from common.utils import Bet, store_bets, load_bets, has_won
 
 class Server:
-    def __init__(self, port, listen_backlog):
+    def __init__(self, port, listen_backlog, number_of_clients):
         # Initialize server socket
         # self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # self._server_socket.bind(('', port))
@@ -13,6 +13,7 @@ class Server:
         self._server_socket = Socket()
         self._server_socket.bind('', port)
         self._server_socket.listen(listen_backlog)
+        self.number_of_clients = number_of_clients
 
         self.protocol = Protocol()
 
@@ -28,11 +29,37 @@ class Server:
         finishes, servers starts to accept new connections again
         """
 
-        # TODO: Modify this program to handle signal to graceful shutdown
-        # the server
-        while self.is_alive:
+        clients = {}
+
+        while self.is_alive and len(clients) < self.number_of_clients:
             client_sock = self.__accept_new_connection()
-            self.__handle_client_connection(client_sock)      
+            processed_client = self.__handle_client_connection(client_sock)   
+
+            clients[processed_client] = client_sock   
+
+        winners = self._define_winners(clients)
+        self._send_winners(clients, winners)
+        self.stop()
+
+
+    def _send_winners(self, clients, winners):
+        for id in clients.keys():
+            self.protocol.send_winners(clients[id], winners[id])
+            clients[id].close()
+
+    def _define_winners(self, clients):
+        bets = load_bets()
+
+        winners = {}
+        for agency in clients.keys():
+            winners[agency] = []
+
+        for bet in bets:
+            if has_won(bet):
+                winners[bet.agency].append(bet.document)
+
+        logging.info(f"action: sorteo | result: success")
+        return winners
 
 
     def __handle_client_connection(self, client_sock):
@@ -54,7 +81,9 @@ class Server:
         except Exception as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
         finally:
-            client_sock.close()
+            agency = self.protocol.recv_ask_for_winners(client_sock)
+            return agency
+            # client_sock.close()
 
 
     def parse_msg(self, msg):

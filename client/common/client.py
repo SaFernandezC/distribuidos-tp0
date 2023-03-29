@@ -19,8 +19,9 @@ class Client:
         signal.signal(signal.SIGTERM, self._handle_sigterm)
 
 
-    # def _create_bet(self):
-    #     return f"{self.agency},{self.name},{self.lastname},{self.document},{self.birthdate},{self.number}"
+    def _ask_for_winners(self):
+        winners = self.protocol.ask_for_winners(self.client_socket, int(self.agency))
+        logging.info(f'action: consulta_ganadores | result: success | cant_ganadores: {len(winners)} | ganadores: {winners}')
 
 
     def send_bets(self, bets_file):
@@ -36,7 +37,8 @@ class Client:
                         logging.info(f'action: apuestas enviadas | result: success | agency: {self.agency} | apuestas: {bets_file}')
                     else:
                         logging.info(f'action: apuestas enviadas | result: fail | agency: {self.agency} | apuestas: {bets_file}')
-        
+
+            self._ask_for_winners()
         except Exception as e:
             logging.error("action: apuestas enviadas | result: fail | error: {}".format(e)) 
         finally:

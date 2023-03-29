@@ -47,6 +47,57 @@ services:
       - ./client/config.ini:/config.ini
       - ./shared:/shared
       - ./.data/dataset:/data
+  
+  client3:
+    container_name: client3
+    image: client:latest
+    entrypoint: python3 /main.py
+    environment:
+      - CLI_ID=3
+      - CLI_LOG_LEVEL=DEBUG
+      - BETS_FILE=agency-3.csv
+    networks:
+      - testing_net
+    depends_on:
+      - server
+    volumes:
+      - ./client/config.ini:/config.ini
+      - ./shared:/shared
+      - ./.data/dataset:/data
+
+  client4:
+    container_name: client4
+    image: client:latest
+    entrypoint: python3 /main.py
+    environment:
+      - CLI_ID=4
+      - CLI_LOG_LEVEL=DEBUG
+      - BETS_FILE=agency-4.csv
+    networks:
+      - testing_net
+    depends_on:
+      - server
+    volumes:
+      - ./client/config.ini:/config.ini
+      - ./shared:/shared
+      - ./.data/dataset:/data
+
+  client5:
+    container_name: client5
+    image: client:latest
+    entrypoint: python3 /main.py
+    environment:
+      - CLI_ID=5
+      - CLI_LOG_LEVEL=DEBUG
+      - BETS_FILE=agency-5.csv
+    networks:
+      - testing_net
+    depends_on:
+      - server
+    volumes:
+      - ./client/config.ini:/config.ini
+      - ./shared:/shared
+      - ./.data/dataset:/data
 
 networks:
   testing_net:
