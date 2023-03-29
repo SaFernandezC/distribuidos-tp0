@@ -6,17 +6,21 @@ import os
 
 class Client:
     def __init__(self, server_ip, server_port, bets_per_batch):
-        self.agency = os.getenv("CLI_ID", "")
-        self.bets_per_batch = bets_per_batch
+        try:
+            self.agency = os.getenv("CLI_ID", "")
+            self.bets_per_batch = bets_per_batch
 
-        # Initialize client socket
-        self.client_socket = Socket()
-        self.client_socket.connect(server_ip, server_port)
+            # Initialize client socket
+            self.client_socket = Socket()
+            self.client_socket.connect(server_ip, server_port)
 
-        # Initialize protocol
-        self.protocol = Protocol()
+            # Initialize protocol
+            self.protocol = Protocol()
 
-        signal.signal(signal.SIGTERM, self._handle_sigterm)
+            signal.signal(signal.SIGTERM, self._handle_sigterm)
+        except Exception as e:
+            self.stop()
+            logging.error("action: create client | result: fail | error: {}".format(e))
 
 
     def _ask_for_winners(self):
@@ -63,7 +67,6 @@ class Client:
     def stop(self):
         try:
             self.client_socket.close()
-        except OSError as e:
-            logging.error("action: stop client | result: fail | error: {e}")
-        finally:
             logging.info("action: stop client | result: success")  
+        except OSError as e:
+            logging.error("action: stop client | result: fail | error: {}".format(e))

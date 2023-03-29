@@ -43,7 +43,6 @@ class Protocol:
         self.ack_ok = 0
         self.ack_error = 1
     
-
     def _divide_msg(self, bet, bet_size):
         if bet_size < self.max_packet_size:
             return bet
@@ -84,7 +83,7 @@ class Protocol:
         skt.send_msg(batch_size.to_bytes(self.cant_bytes_len, byteorder='big'))
 
         self._send_chunk(skt, batch, batch_size)
-        logging.info(f'action: Batch sended | result: success | agency: {agency} | msg_len: {batch_size}')
+        logging.debug(f'action: Batch sended | result: success | agency: {agency} | msg_len: {batch_size}')
 
 
     def recv_bets(self, skt):
@@ -93,21 +92,21 @@ class Protocol:
 
         batch = self._recv_chunk(skt, batch_size)
         batch = decode_batch(batch)
-        logging.info(f'action: Batch received | result: success | ip: {batch["agency"]} | msg_len: {batch_size}')
+        logging.debug(f'action: Batch received | result: success | ip: {batch["agency"]} | msg_len: {batch_size}')
         return batch
 
     def send_ack(self, skt, status):
         # Receives status=true for ok or status=false for error
         msg = self.ack_ok if status == True else self.ack_error
         skt.send_msg(msg.to_bytes(self.cant_bytes_ack, byteorder='big'))
-        logging.info(f'action: Send ack | result: success | ip: {skt.get_addr()} | msg: {status}')
+        logging.debug(f'action: Send ack | result: success | ip: {skt.get_addr()} | msg: {status}')
 
     def recv_ack(self, skt):
         ack_bytes = skt.recv_msg(self.cant_bytes_ack)
         ack = int.from_bytes(ack_bytes, byteorder='big')
 
         response = True if ack == self.ack_ok else False
-        logging.info(f'action: Receive ack | result: success | ip: {skt.get_addr()} | msg: {response}')
+        logging.debug(f'action: Receive ack | result: success | ip: {skt.get_addr()} | msg: {response}')
         return response
 
     def ask_for_winners(self, skt, agency_id):

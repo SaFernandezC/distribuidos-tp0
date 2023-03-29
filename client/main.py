@@ -53,9 +53,12 @@ def main():
                   f"server_port: {server_port} | logging_level: {logging_level}")
 
     # Initialize server and start server loop
-    client = Client(server_ip, server_port, bets_per_batch)
-    file_path = f"./data/{bets_file}"
-    client.send_bets(file_path)
+    try:
+        client = Client(server_ip, server_port, bets_per_batch)
+        file_path = f"./data/{bets_file}"
+        client.send_bets(file_path)
+    except Exception as e:
+        logging.error("Error: {}".format(e))
 
 def initialize_log(logging_level):
     """

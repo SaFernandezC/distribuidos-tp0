@@ -19,7 +19,9 @@ class Socket:
 
     def accept(self):
         client_skt, addr = self.skt.accept()
-        return Socket(client_skt, addr)
+        if client_skt:
+            return Socket(client_skt, addr)
+        else: return None
 
     def connect(self, addr, port):
         self.skt.connect((addr, port))
