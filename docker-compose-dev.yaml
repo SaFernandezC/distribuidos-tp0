@@ -21,11 +21,7 @@ services:
     environment:
       - CLI_ID=1
       - CLI_LOG_LEVEL=DEBUG
-      - NOMBRE=Santiago
-      - APELLIDO=Lorca
-      - DOCUMENTO=30904465
-      - NACIMIENTO=1999-03-17
-      - NUMERO=7574
+      - BETS_FILE=agency-1.csv
     networks:
       - testing_net
     depends_on:
@@ -33,6 +29,7 @@ services:
     volumes:
       - ./client/config.ini:/config.ini
       - ./shared:/shared
+      - ./.data/dataset:/data
 
   client2:
     container_name: client2
@@ -41,11 +38,7 @@ services:
     environment:
       - CLI_ID=2
       - CLI_LOG_LEVEL=DEBUG
-      - NOMBRE=Lionel
-      - APELLIDO=Messi
-      - DOCUMENTO=33016244
-      - NACIMIENTO=1987-06-24
-      - NUMERO=9999
+      - BETS_FILE=agency-2.csv
     networks:
       - testing_net
     depends_on:
@@ -53,6 +46,7 @@ services:
     volumes:
       - ./client/config.ini:/config.ini
       - ./shared:/shared
+      - ./.data/dataset:/data
 
 networks:
   testing_net:

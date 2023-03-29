@@ -1,6 +1,7 @@
 from configparser import ConfigParser
 import os
 import logging
+import json
 
 def _initialize_config():
     config = ConfigParser(os.environ)
@@ -21,6 +22,14 @@ def _initialize_config():
         raise ValueError("Key could not be parsed. Error: {}. Aborting".format(e))
 
     return config_params
+
+
+def encode_batch(agency, data, last_batch):
+    return json.dumps({"agency":agency, "data":data, "last_batch":last_batch})
+
+def decode_batch(batch):
+    return json.loads(batch)
+
 
 class Protocol:
     def __init__(self):
@@ -55,32 +64,33 @@ class Protocol:
         return chunks_size
     
 
-    def send_bet(self, skt, bet):
+    def send_bets(self, skt, agency, data, last_batch):
+        batch = encode_batch(agency, data, last_batch)
 
-        bet_size = len(bet)
+        batch_size = len(batch)
+        skt.send_msg(batch_size.to_bytes(self.cant_bytes_len, byteorder='big'))
 
-        skt.send_msg(bet_size.to_bytes(self.cant_bytes_len, byteorder='big'))
-
-        divided_bet = self._divide_msg(bet, bet_size)
-        for part in divided_bet:
+        divided_batch = self._divide_msg(batch, batch_size)
+        for part in divided_batch:
             skt.send_msg(bytes(part, 'utf-8'))
 
-        logging.info(f'action: Send bet | result: success | ip: {skt.get_addr()} | msg: {bet}')
+        logging.info(f'action: Batch sended | result: success | agency: {agency} | msg_len: {batch_size}')
 
-    def recv_bet(self, skt):
 
-        bet_size_bytes = skt.recv_msg(4)
-        bet_size = int.from_bytes(bet_size_bytes, byteorder='big')
+    def recv_bets(self, skt):
+        batch_size_bytes = skt.recv_msg(self.cant_bytes_len)
+        batch_size = int.from_bytes(batch_size_bytes, byteorder='big')
 
-        bet_data = ""
+        batch = ""
         
-        chunks_size = self._size_to_chunks(bet_size)
+        chunks_size = self._size_to_chunks(batch_size)
         for chunk in chunks_size:
             data = skt.recv_msg(chunk)
-            bet_data += data.decode()
+            batch += data.decode()
 
-        logging.info(f'action: Receive bet | result: success | ip: {skt.get_addr()} | msg: {bet_data}')
-        return bet_data
+        batch = decode_batch(batch)
+        logging.info(f'action: Batch received | result: success | ip: {batch["agency"]} | msg_len: {batch_size}')
+        return batch
 
     def send_ack(self, skt, status):
         # Receives status=true for ok or status=false for error

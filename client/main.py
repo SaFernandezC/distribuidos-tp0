@@ -26,6 +26,8 @@ def initialize_config():
         config_params["server_ip"] = os.getenv('SERVER_IP', config["DEFAULT"]["SERVER_IP"])
         config_params["server_port"] = int(os.getenv('SERVER_PORT', config["DEFAULT"]["SERVER_PORT"]))
         config_params["logging_level"] = os.getenv('LOGGING_LEVEL', config["DEFAULT"]["LOGGING_LEVEL"])
+        config_params["bets_per_batch"] = os.getenv('BETS_PER_BATCH', config["DEFAULT"]["BETS_PER_BATCH"])
+        config_params["bets_file"] = os.getenv('BETS_FILE', config["DEFAULT"]["BETS_FILE"])
 
     except KeyError as e:
         raise KeyError("Key was not found. Error: {} .Aborting server".format(e))
@@ -40,6 +42,8 @@ def main():
     logging_level = config_params["logging_level"]
     server_port = config_params["server_port"]
     server_ip = config_params["server_ip"]
+    bets_per_batch = int(config_params["bets_per_batch"])
+    bets_file = config_params["bets_file"]
 
     initialize_log(logging_level)
 
@@ -49,8 +53,9 @@ def main():
                   f"server_port: {server_port} | logging_level: {logging_level}")
 
     # Initialize server and start server loop
-    client = Client(server_ip, server_port)
-    client.send_bets()
+    client = Client(server_ip, server_port, bets_per_batch)
+    file_path = f"./data/{bets_file}"
+    client.send_bets(file_path)
 
 def initialize_log(logging_level):
     """

@@ -43,11 +43,14 @@ class Server:
         client socket will also be closed
         """
         try:
-            msg = self.protocol.recv_bet(client_sock)
-            bet = self.parse_msg(msg)
-            store_bets([bet])
-            self.protocol.send_ack(client_sock, True)
-            logging.info(f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
+            last_batch_received = False
+            while not last_batch_received:
+                batch = self.protocol.recv_bets(client_sock)
+                bets, last_batch_received = self.parse_msg(batch)
+                store_bets(bets)
+                self.protocol.send_ack(client_sock, True)
+                logging.info(f"action: batch almacenado | result: success | agency: {batch['agency']} | cantidad apuestas: {len(batch['data'])}")
+
         except Exception as e:
             logging.error(f"action: receive_message | result: fail | error: {e}")
         finally:
@@ -55,11 +58,15 @@ class Server:
 
 
     def parse_msg(self, msg):
-        splitted_string = msg.split(',')
-        return Bet(splitted_string[0], splitted_string[1], splitted_string[2],
-                   splitted_string[3], splitted_string[4], splitted_string[5])
+        bets = []
+        for bet in msg["data"]:
+            splitted_string = bet.split(',')
+            new_bet = Bet(msg["agency"], splitted_string[0], splitted_string[1],
+                        splitted_string[2], splitted_string[3], splitted_string[4])
+            bets.append(new_bet)
         
-
+        return bets, msg["last_batch"]
+        
 
     def __accept_new_connection(self):
         """
@@ -71,7 +78,6 @@ class Server:
 
         # Connection arrived
         logging.info('action: accept_connections | result: in_progress')
-        # c, addr = self._server_socket.accept()
         c = self._server_socket.accept()
         addr = c.get_addr()
         logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')

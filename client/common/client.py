@@ -5,13 +5,9 @@ import signal
 import os
 
 class Client:
-    def __init__(self, server_ip, server_port):
+    def __init__(self, server_ip, server_port, bets_per_batch):
         self.agency = os.getenv("CLI_ID", "")
-        self.name = os.getenv('NOMBRE', "")
-        self.lastname = os.getenv('APELLIDO', "")
-        self.document = os.getenv('DOCUMENTO', "")
-        self.birthdate = os.getenv('NACIMIENTO', "")
-        self.number = os.getenv('NUMERO', "")
+        self.bets_per_batch = bets_per_batch
 
         # Initialize client socket
         self.client_socket = Socket()
@@ -20,29 +16,42 @@ class Client:
         # Initialize protocol
         self.protocol = Protocol()
 
-        # self.is_alive = True
         signal.signal(signal.SIGTERM, self._handle_sigterm)
 
 
-    def _create_bet(self):
-        return f"{self.agency},{self.name},{self.lastname},{self.document},{self.birthdate},{self.number}"
+    # def _create_bet(self):
+    #     return f"{self.agency},{self.name},{self.lastname},{self.document},{self.birthdate},{self.number}"
 
 
-    def send_bets(self):
-
+    def send_bets(self, bets_file):
+        finished = False
         try:
-            bet = self._create_bet()
-            self.protocol.send_bet(self.client_socket, bet)
-            ack = self.protocol.recv_ack(self.client_socket)
-            if(ack):
-                logging.info(f'action: apuesta_enviada | result: success | dni: {self.document} | numero: {self.number}')
-            else:
-                logging.info(f'action: apuesta_enviada | result: fail | dni: {self.document} | numero: {self.number}')
+            with open(bets_file) as file:
+                while not finished:
+                    finished, batch = self.next_batch(file)
+                    self.protocol.send_bets(self.client_socket, self.agency, batch, finished)
+
+                    ack = self.protocol.recv_ack(self.client_socket)
+                    if(ack):
+                        logging.info(f'action: apuestas enviadas | result: success | agency: {self.agency} | apuestas: {bets_file}')
+                    else:
+                        logging.info(f'action: apuestas enviadas | result: fail | agency: {self.agency} | apuestas: {bets_file}')
         
         except Exception as e:
-            logging.error("action: apuesta_enviada | result: fail | error: {}".format(e)) 
+            logging.error("action: apuestas enviadas | result: fail | error: {}".format(e)) 
         finally:
             self.stop()
+
+
+    def next_batch(self, file):
+        bets = []
+        for i in range(self.bets_per_batch):
+            line = file.readline()
+            if not line:
+                return True, bets
+            
+            bets.append(line)
+        return False, bets
 
 
     def _handle_sigterm(self, *args):
