@@ -144,6 +144,10 @@ class Server:
         self._server_running = False
         try:
             self._server_socket.close()
+            for worker in self._workers:
+                worker.join()
+            self._bet_writer.join()
+            self._winner_definer.join()
         except OSError as e:
             logging.error("action: stop server | result: fail | error: {}".format(e))
         finally:
