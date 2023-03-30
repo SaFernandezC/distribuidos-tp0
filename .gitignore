@@ -1,6 +1,6 @@
 # Mac
 **.DS_Store
-__pycache__/
+**/__pycache__
 
 # Executables
 bin/
