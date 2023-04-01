@@ -42,7 +42,7 @@ class Protocol:
     def encode_batch(self, agency, data, last_batch):
         """
         Batch encoder:
-        - 1 byte for msg type self, NORMAL_BATCH or LAST_BATCH)
+        - 1 byte for msg type (NORMAL_BATCH or LAST_BATCH)
         - 2 bytes with agency_id
         - 2 bytes with amount of bets to send
         - Bets data -> 2 bytes with field length and then send the field info
@@ -51,15 +51,15 @@ class Protocol:
 
         payload = bytearray()
         payload += bytes(msg_type, 'latin1')
-        payload += len(agency).to_bytes(2, byteorder='big')
+        payload += len(agency).to_bytes(LEN_STRING, byteorder='big')
         payload += bytes(agency, 'latin1')
 
-        payload += len(data).to_bytes(2, byteorder='big')
+        payload += len(data).to_bytes(LEN_NUMBER, byteorder='big')
 
         for bet in data:
             splited_bet = bet.split(',')
             for item in splited_bet:
-                payload += len(item).to_bytes(2, byteorder='big')
+                payload += len(item).to_bytes(LEN_STRING, byteorder='big')
                 payload += bytes(item, 'latin1')
         return payload
 
