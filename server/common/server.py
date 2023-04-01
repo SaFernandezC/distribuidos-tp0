@@ -5,28 +5,26 @@ from shared.protocol import Protocol
 from common.utils import Bet, store_bets, load_bets, has_won
 import multiprocessing
 
-# Hacerlo config
 WORKERS = 3
 
 class Server:
     def __init__(self, port, listen_backlog, number_of_clients):
-        # Initialize server socket
         self._server_socket = Socket()
         self._server_socket.bind('', port)
         self._server_socket.listen(listen_backlog)
         self.number_of_clients = number_of_clients
-
-        self.protocol = Protocol()
-
+        
         self.is_alive = True
         signal.signal(signal.SIGTERM, self._handle_sigterm)
+
+        self.protocol = Protocol()
 
         self.clients_queue = multiprocessing.Queue()
         self.bets_queue = multiprocessing.Queue()
         self.waiting_result_queue = multiprocessing.Queue()
 
         self._workers = [multiprocessing.Process(target=self._handle_connection,
-                                                 args=(self.clients_queue, self.bets_queue, self.waiting_result_queue))
+                                                 args=(self.clients_queue, self.bets_queue))
                                                  for i in range(WORKERS)]
 
         self._bet_writer = multiprocessing.Process(target=self._write_bets,
@@ -36,6 +34,11 @@ class Server:
                                                   args=(self.waiting_result_queue,))
 
     def _perform_lottery(self, waiting_result_queue):
+        """
+        Lottery process: loops getting clients from waiting_result_queue until all clients
+        finished sending bets.
+        Then defines winners and sends winners to clients
+        """
         try:
             agencies = {}
 
@@ -46,12 +49,15 @@ class Server:
 
             winners = self._define_winners(agencies)
             self._send_winners(agencies, winners)
-
         except Exception as e:
             logging.error("action: definiendo ganadores | result: fail | error: {}".format(e))
             
 
     def _write_bets(self, bets_queue, waiting_result_queue):
+        """
+        Write bets process: takes a batch of bets from bets_queue, stores those bets,
+        if that was the last batch of that agency pushes that agency into waiting_result_queue
+        """
         while True:
             try:
                 client_sock, bets, last_batch = bets_queue.get()
@@ -61,7 +67,14 @@ class Server:
             except Exception as e:
                 logging.error("action: escribiendo apuestas | result: fail | error: {}".format(e))
 
-    def _handle_connection(self, clients_queue, bets_queue, waiting_result_queue):
+    def _handle_connection(self, clients_queue, bets_queue):
+        """
+        Workers process: Takes clients from clients_queue, receives one bets batch from that
+        client, pushes that batch to bets_queue then sends ack to client.
+        If that was NOT the last batch pushes the client back to clients_queue to
+        repite the process.
+        Processing is done by batch and not by client.
+        """
         while True:
             try:
                 client_sock = clients_queue.get()
@@ -73,12 +86,18 @@ class Server:
                 
                 if not last_batch_received:
                     clients_queue.put(client_sock)
+                else:
+                    logging.info(f"action: all bets received from agency | result: success | agency: {batch['agency']}")
 
-                logging.info(f"action: batch almacenado | result: success | agency: {batch['agency']} | cantidad apuestas: {len(batch['data'])}")
+                logging.debug(f"action: batch almacenado | result: success | agency: {batch['agency']} | cantidad apuestas: {len(batch['data'])}")
             except Exception as e:
                 logging.error("action: handle_connections | result: fail | error: {}".format(e))
 
     def run(self):
+        """
+        Main process: starts other processes and iterate accepting new clients.
+        After accepting a new client pushes it to clients queue
+        """
         for worker in self._workers:
             worker.start()
 
@@ -93,11 +112,17 @@ class Server:
                 self.stop()
 
     def _send_winners(self, clients, winners):
+        """
+        Calls protocol to send winners. Closes clients sockets
+        """
         for id in clients.keys():
             self.protocol.send_winners(clients[id], winners[id])
             clients[id].close()
 
     def _define_winners(self, clients):
+        """
+        Defines winners per agency
+        """
         bets = load_bets()
 
         winners = {}
@@ -112,6 +137,9 @@ class Server:
         return winners
 
     def parse_msg(self, msg):
+        """"
+        Parses bets received from protocol
+        """
         bets = []
         for bet in msg["data"]:
             splitted_string = bet.split(',')
@@ -124,12 +152,9 @@ class Server:
     def __accept_new_connection(self):
         """
         Accept new connections
-
         Function blocks until a connection to a client is made.
         Then connection created is printed and returned
         """
-
-        # Connection arrived
         logging.info('action: accept_connections | result: in_progress')
         c = self._server_socket.accept()
         addr = c.get_addr()
@@ -137,11 +162,17 @@ class Server:
         return c
 
     def _handle_sigterm(self, *args):
+        """
+        Handles SIGTERM signal
+        """
         logging.info('SIGTERM received - Shutting server down')
         self.stop()
 
     def stop(self):
-        self._server_running = False
+        """
+        Stops the server
+        """
+        self.is_alive = False
         try:
             self._server_socket.close()
             for worker in self._workers:

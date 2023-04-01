@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from configparser import ConfigParser
 from common.client import Client
 import logging
@@ -49,7 +47,7 @@ def main():
 
     # Log config parameters at the beginning of the program to verify the configuration
     # of the component
-    logging.debug(f"action: config | result: success | server_ip: {server_ip} | "
+    logging.info(f"action: config | result: success | server_ip: {server_ip} | "
                   f"server_port: {server_port} | logging_level: {logging_level}")
 
     # Initialize server and start server loop
@@ -72,7 +70,6 @@ def initialize_log(logging_level):
         level=logging_level,
         datefmt='%Y-%m-%d %H:%M:%S',
     )
-
 
 if __name__ == "__main__":
     main()
